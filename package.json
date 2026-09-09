@@ -1,0 +1,17 @@
+{
+  "name": "open-road-festival",
+  "version": "1.0.0",
+  "description": "3D Open-World Driving Simulator in Browser",
+  "main": "index.html",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=js/game.bundle.js",
+    "watch": "esbuild src/main.js --bundle --format=iife --outfile=js/game.bundle.js --watch",
+    "serve": "python3 -m http.server 8080"
+  },
+  "dependencies": {
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}

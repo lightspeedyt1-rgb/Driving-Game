@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Open Road Festival - 3D Open-World Driving Simulator</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700;800&family=Teko:wght@700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Three.js Library with local and CDN fallback -->
+  <script src="js/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- IN-GAME HUD OVERLAY -->
+    <div id="hud-overlay">
+      <!-- Top Status Bar -->
+      <div class="hud-top-bar">
+        <div class="hud-location-badge">
+          <div class="hud-area-name">
+            <span id="hud-area-name">FESTIVAL PLAZA</span>
+            <span class="hud-surface-tag" id="hud-surface-tag">ASPHALT</span>
+          </div>
+          <div class="hud-street-name" id="hud-street-name">Central Festival Boulevard</div>
+        </div>
+
+        <div class="hud-player-stats">
+          <div class="hud-stat-pill level">
+            <span class="hud-stat-label">DRIVER</span>
+            <span class="hud-stat-value" id="hud-level-val">LVL 1</span>
+          </div>
+          <div class="hud-stat-pill credits">
+            <span class="hud-stat-label">FESTIVAL CREDITS</span>
+            <span class="hud-stat-value" id="hud-credits-val">15,000 CR</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Event Progress Tracker -->
+      <div class="hud-event-tracker" id="hud-event-tracker">
+        <div class="hud-event-title" id="hud-event-title">Sunset Marina GP</div>
+        <div class="hud-event-details">
+          <span id="hud-event-time">00:00.00</span>
+          <span class="hud-event-pos" id="hud-event-pos">POS 1/4</span>
+        </div>
+        <div class="hud-event-progress-bar">
+          <div class="hud-event-progress-fill" id="hud-event-progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Drift Score Popup -->
+      <div class="hud-drift-container" id="hud-drift-container">
+        <div class="hud-drift-title">DRIFT BONUS</div>
+        <div class="hud-drift-score" id="hud-drift-score">0 PTS</div>
+        <div class="hud-drift-multiplier" id="hud-drift-mult">DRIFT x1</div>
+      </div>
+
+      <!-- Speed Trap Flash -->
+      <div class="hud-speed-trap-flash" id="hud-speed-trap-flash">
+        <div class="hud-speed-trap-name" id="hud-speed-trap-name">HIGHWAY VIADUCT BLITZ</div>
+        <div class="hud-speed-trap-value" id="hud-speed-trap-val">168 MPH</div>
+        <div class="hud-speed-trap-stars" id="hud-speed-trap-stars">★★★</div>
+      </div>
+
+      <!-- In-World Event Entry Prompt -->
+      <div id="event-prompt">
+        <div class="prompt-event-title" id="prompt-event-title">Sunset Marina Grand Prix</div>
+        <div class="prompt-event-type" id="prompt-event-type">🏁 CIRCUIT RACE</div>
+        <div class="prompt-key-action">
+          <span>Press</span> <span class="key-badge">E</span> <span>or</span> <span class="key-badge">ENTER</span> <span>to Enter Event</span>
+        </div>
+      </div>
+
+      <!-- Race Countdown Banner -->
+      <div id="race-countdown">3</div>
+
+      <!-- Bottom Bar: Minimap & Speedometer -->
+      <div class="hud-bottom-bar">
+        <!-- Radial Minimap / Radar -->
+        <div class="hud-minimap-wrapper">
+          <div class="hud-minimap-compass">N</div>
+          <canvas id="minimap-canvas" width="220" height="220"></canvas>
+        </div>
+
+        <!-- Speedometer Gauge Cluster -->
+        <div class="hud-cluster">
+          <div class="hud-assists-tray">
+            <span class="hud-assist-badge" id="assist-abs">ABS</span>
+            <span class="hud-assist-badge" id="assist-tcs">TCS</span>
+            <span class="hud-assist-badge" id="assist-esp">ESP</span>
+          </div>
+
+          <div class="hud-gauge-card hud-interactive">
+            <!-- Speed digits -->
+            <div class="hud-speed-group">
+              <div class="hud-speed-number" id="hud-speed-num">0</div>
+              <div class="hud-speed-unit" id="hud-speed-unit">MPH</div>
+            </div>
+
+            <!-- Gear display -->
+            <div class="hud-gear-box">
+              <div class="hud-gear-label">GEAR</div>
+              <div class="hud-gear-value" id="hud-gear-val">1</div>
+            </div>
+
+            <!-- RPM & Nitro Bars -->
+            <div class="hud-bars-column">
+              <div class="hud-bar-wrapper">
+                <div class="hud-bar-label"><span>RPM</span></div>
+                <div class="hud-meter">
+                  <div class="hud-meter-fill rpm" id="hud-rpm-fill"></div>
+                </div>
+              </div>
+              <div class="hud-bar-wrapper">
+                <div class="hud-bar-label"><span>NITRO</span></div>
+                <div class="hud-meter">
+                  <div class="hud-meter-fill nitro" id="hud-nitro-fill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast">
+      <div class="notif-title" id="toast-title">SPEED TRAP</div>
+      <div class="notif-desc" id="toast-desc">New Record: 172 MPH!</div>
+    </div>
+
+    <!-- TOUCH CONTROLS (Mobile / Tablet) -->
+    <div id="touch-controls">
+      <div class="touch-btn" id="touch-steer-left">◀</div>
+      <div class="touch-btn" id="touch-steer-right">▶</div>
+      <div class="touch-btn" id="touch-throttle">▲</div>
+      <div class="touch-btn" id="touch-brake">▼</div>
+      <div class="touch-btn" id="touch-handbrake">🛑</div>
+      <div class="touch-btn" id="touch-nitro">⚡</div>
+      <div class="touch-btn" id="touch-reset">R</div>
+      <div class="touch-btn" id="touch-cam">CAM</div>
+    </div>
+
+    <!-- MODAL 1: GARAGE & VEHICLE SHOWROOM -->
+    <div class="modal-backdrop" id="garage-modal">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <div class="menu-title">
+            <span>FESTIVAL GARAGE</span>
+            <span class="menu-title-tag">SHOWROOM & TUNING</span>
+          </div>
+          <button class="close-btn close-modal-btn">✕</button>
+        </div>
+
+        <!-- Vehicle Carousel -->
+        <div class="car-card-selector" id="garage-car-list"></div>
+
+        <div class="garage-layout">
+          <!-- Car Specs & Action -->
+          <div class="car-stats-grid">
+            <div>
+              <h2 id="garage-car-name" style="font-size: 24px; font-weight: 800; color: #fff;">Breeze RS</h2>
+              <div id="garage-car-class" style="color: var(--primary); font-weight: 700; font-size: 13px; text-transform: uppercase;">Compact Hot Hatch • FWD</div>
+              <p id="garage-car-desc" style="color: var(--text-muted); font-size: 13px; margin-top: 6px; line-height: 1.4;">Nimble and forgiving.</p>
+            </div>
+
+            <div class="car-stat-row">
+              <div class="car-stat-meta"><span>Top Speed</span><span id="stat-top-speed-val">138 MPH</span></div>
+              <div class="car-stat-bar"><div class="car-stat-fill" id="stat-top-speed"></div></div>
+            </div>
+            <div class="car-stat-row">
+              <div class="car-stat-meta"><span>Power</span><span id="stat-power-val">210 HP</span></div>
+              <div class="car-stat-bar"><div class="car-stat-fill" id="stat-power"></div></div>
+            </div>
+            <div class="car-stat-row">
+              <div class="car-stat-meta"><span>Handling</span><span id="stat-handling-val">85/100</span></div>
+              <div class="car-stat-bar"><div class="car-stat-fill" id="stat-handling"></div></div>
+            </div>
+            <div class="car-stat-row">
+              <div class="car-stat-meta"><span>Braking</span><span id="stat-braking-val">80/100</span></div>
+              <div class="car-stat-bar"><div class="car-stat-fill" id="stat-braking"></div></div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              <button class="btn btn-accent" id="garage-action-btn" style="width: 100%;">SELECT & DRIVE</button>
+            </div>
+          </div>
+
+          <!-- Customization & Upgrades -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Paint Section -->
+            <div class="paint-section">
+              <div style="font-weight: 700; font-size: 14px; text-transform: uppercase; color: var(--primary);">Custom Paint Finish</div>
+              <div class="paint-swatches" id="garage-paint-swatches"></div>
+            </div>
+
+            <!-- Upgrades List -->
+            <div class="upgrades-list" id="garage-upgrades-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: PAUSE MENU -->
+    <div class="modal-backdrop" id="pause-modal">
+      <div class="menu-panel" style="max-width: 440px;">
+        <div class="menu-header">
+          <div class="menu-title">PAUSE</div>
+          <button class="close-btn close-modal-btn">✕</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button class="btn" id="pause-resume-btn">▶ RESUME DRIVING</button>
+          <button class="btn btn-secondary" id="pause-restart-btn">🔄 RESTART EVENT</button>
+          <button class="btn btn-secondary" id="pause-garage-btn">🚗 FESTIVAL GARAGE</button>
+          <button class="btn btn-secondary" id="pause-map-btn">🗺️ WORLD MAP</button>
+          <button class="btn btn-secondary" id="pause-settings-btn">⚙️ SETTINGS</button>
+          <button class="btn btn-secondary" id="pause-quit-event-btn" style="color: var(--danger);">🛑 QUIT TO FREE ROAM</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 3: FULLSCREEN WORLD MAP -->
+    <div class="modal-backdrop" id="world-map-modal">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <div class="menu-title">
+            <span>FESTIVAL WORLD MAP</span>
+            <span class="menu-title-tag">ISLAND EXPLORATION</span>
+          </div>
+          <button class="close-btn close-modal-btn">✕</button>
+        </div>
+
+        <div class="map-container">
+          <canvas id="fullscreen-map-canvas"></canvas>
+          <div class="map-controls-bar">
+            <button class="map-filter-btn active" data-filter="ALL">ALL PINS</button>
+            <button class="map-filter-btn" data-filter="RACES">RACES</button>
+            <button class="map-filter-btn" data-filter="DRIFT">DRIFT</button>
+            <button class="map-filter-btn" data-filter="TRAPS">SPEED TRAPS</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 4: SETTINGS MENU -->
+    <div class="modal-backdrop" id="settings-modal">
+      <div class="menu-panel">
+        <div class="menu-header">
+          <div class="menu-title">SETTINGS</div>
+          <button class="close-btn close-modal-btn">✕</button>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Graphics Settings -->
+          <div class="settings-card">
+            <div class="settings-card-title">Graphics & Performance</div>
+            <div class="settings-row">
+              <span class="settings-label">Graphics Preset</span>
+              <select class="settings-select" id="setting-graphics">
+                <option value="perf">Performance (60 FPS)</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="quality">High Quality</option>
+                <option value="ultra">Ultra (Max Shadows)</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Shadow Quality</span>
+              <select class="settings-select" id="setting-shadows">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Atmospheric Weather</span>
+              <select class="settings-select" id="setting-weather">
+                <option value="clear" selected>Clear Sunny</option>
+                <option value="sunset">Sunset Golden Hour</option>
+                <option value="night">Midnight Neon</option>
+                <option value="rain">Rain & Wet Roads</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Gameplay & Assists -->
+          <div class="settings-card">
+            <div class="settings-card-title">Driving Assists</div>
+            <div class="settings-row">
+              <span class="settings-label">Anti-lock Braking (ABS)</span>
+              <input type="checkbox" id="setting-abs" checked>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Traction Control (TCS)</span>
+              <input type="checkbox" id="setting-tcs" checked>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Stability Control (ESP)</span>
+              <input type="checkbox" id="setting-esp" checked>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Steering Sensitivity</span>
+              <input type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="settings-slider" id="setting-sensitivity">
+            </div>
+          </div>
+
+          <!-- Audio Volume Sliders -->
+          <div class="settings-card">
+            <div class="settings-card-title">Sound & Radio</div>
+            <div class="settings-row">
+              <span class="settings-label">Master Volume</span>
+              <input type="range" min="0" max="1" step="0.05" value="0.8" class="settings-slider" id="volume-master">
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Engine Volume</span>
+              <input type="range" min="0" max="1" step="0.05" value="0.85" class="settings-slider" id="volume-engine">
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Festival Radio Synth</span>
+              <input type="range" min="0" max="1" step="0.05" value="0.45" class="settings-slider" id="volume-music">
+            </div>
+          </div>
+
+          <!-- Save Data Management -->
+          <div class="settings-card">
+            <div class="settings-card-title">Save Data</div>
+            <div class="settings-row">
+              <span class="settings-label">Reset All Progress</span>
+              <button class="btn btn-secondary" id="setting-reset-save" style="color: var(--danger); font-size: 11px;">RESET SAVE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 5: EVENT FINISH SCREEN -->
+    <div class="modal-backdrop" id="event-finish-modal">
+      <div class="menu-panel">
+        <div class="finish-medal-icon">🏆</div>
+        <div class="finish-event-title" id="finish-event-title">Sunset Marina GP</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--gold);" id="finish-pos-val">1st Place</div>
+
+        <div class="finish-rewards-row">
+          <div class="finish-reward-box">
+            <div class="hud-stat-label">FINISH TIME</div>
+            <div class="finish-reward-val" id="finish-time-val">01:42.50</div>
+          </div>
+          <div class="finish-reward-box">
+            <div class="hud-stat-label">CREDITS EARNED</div>
+            <div class="finish-reward-val" id="finish-credits-val">+18,000 CR</div>
+          </div>
+          <div class="finish-reward-box">
+            <div class="hud-stat-label">DRIVER XP</div>
+            <div class="finish-reward-val" id="finish-xp-val" style="color: var(--primary);">+600 XP</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; width: 100%; justify-content: center; margin-top: 10px;">
+          <button class="btn btn-secondary" id="finish-retry-btn">🔄 RETRY EVENT</button>
+          <button class="btn btn-accent" id="finish-freeroam-btn">🚗 CONTINUE FREE ROAM</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Engine Bundle -->
+  <script src="js/game.bundle.js"></script>
+</body>
+</html>
